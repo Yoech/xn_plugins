@@ -31,10 +31,11 @@ db_exec($sql);
 
 //浅唱修改开始
 $sql = "CREATE TABLE IF NOT EXISTS {$tablepre}search_log (
-  `clientip` varchar(40) NOT NULL COMMENT '搜索时IP',
+  `clientip` varchar(40) NOT NULL COMMENT '请求IP',
+  `ua` varchar(255) NOT NULL COMMENT 'User-Agent',
   `datetime` int(13) NOT NULL COMMENT '搜索时间',
-  `userid` int(11) NOT NULL COMMENT '用户编号',
-  `type` int(1) NOT NULL COMMENT '搜索类型',
+  `userid` int(11) NOT NULL COMMENT '用户索引',
+  `type` int(1) NOT NULL COMMENT '搜索类型：0=所有贴、1=主题帖',
   `content` varchar(255) NOT NULL COMMENT '搜索内容'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci";
 db_exec($sql);
