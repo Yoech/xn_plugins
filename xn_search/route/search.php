@@ -9,8 +9,38 @@ $range = param(2, 1);
 $page = param(3, 1);
 
 $keyword_decode = search_keyword_safe(xn_urldecode($keyword));
+
+//浅唱修改开始
+if($keyword_decode <> ""){
+	$ret = search_log($uid,$range,$keyword_decode);
+	
+	switch ($ret){
+	case 1://执行搜索
+		break; 
+	case 2://强制要求登录
+		message(-1, jump('请登录后再次搜索', url('user-login')));
+		exit; 
+	case 3://搜索间隔少于10秒
+		message(-1, jump('您在 10 秒内只能进行一次搜索', url('search--'.$range) . '?word=' . $keyword_decode));
+		exit;
+	case 4://搜索间隔少于30秒
+		message(-1, jump('您在 30 秒内只能进行一次搜索', url('search--'.$range) . '?word=' . $keyword_decode));
+		exit;
+	case 5://搜索间隔少于60秒
+		message(-1, jump('您在 60 秒内只能进行一次搜索', url('search--'.$range) . '?word=' . $keyword_decode));
+		exit;
+	case 6://当天禁止该用户搜索功能
+		message(-1, '搜索次数已达上限');
+		exit;
+	default://发生未知错误
+		message(-1, jump('发生未知错误', url('search--'.$range)));
+		exit;
+	}
+}
+//浅唱修改结束
+
 $keyword_arr = explode(' ', $keyword_decode);
-$threadlist = $postlist = $userlist = array();
+$threadlist = $postlist = array();
 $pagination = '';
 $active = '';
 
@@ -189,5 +219,62 @@ if($ajax) {
 	include _include(APP_PATH.'plugin/xn_search/htm/search.htm');
 }
 
-
+//浅唱修改开始
+function search_log($text1,$text2,$text3){
+	//用户UID
+	//搜索类型
+	//搜索内容
+	if($text1 == ""){$text1 = "0";}
+	//查询是否存在今天的搜索记录
+	$arrtime = db_sql_find_one("SELECT COUNT(type) AS time FROM `bbs_search_log` WHERE datetime >= unix_timestamp(curdate()) AND datetime <= unix_timestamp()");
+	if($arr['number'] == "0"){
+		//删除一周前的搜索记录
+		db_sql_find_one("DELETE FROM `bbs_search_log` WHERE datetime < unix_timestamp(date_sub(curdate(),interval 6 day))");
+	}
+	//查询用户上一次搜索间隔
+	$arrtime = db_sql_find_one("SELECT MAX(datetime) AS time FROM `bbs_search_log` WHERE datetime >= unix_timestamp(curdate()) AND datetime <= unix_timestamp() AND userid = '" . $text1 . "' AND clientip = '" . $_SERVER["REMOTE_ADDR"] . "'");
+	if($arrtime['time'] <> ''){
+		if($arrtime['time'] + 10 > time()){
+			return 3;//搜索间隔少于10秒
+		}
+	}
+	//查询当前用户IP地址搜索次数
+	$arr = db_sql_find_one("SELECT COUNT(clientip) AS number FROM `bbs_search_log` WHERE datetime >= unix_timestamp(curdate()) AND datetime <= unix_timestamp() AND clientip = '" . $_SERVER["REMOTE_ADDR"] . "'");
+	if($text1 == "0"){//用户未登录
+		if($arr['number'] > 5){//当天搜索超过5次
+			return 2;//强制要求登录
+		}
+	}else{
+		if($arr['number'] > 20){//用户当天搜索超过20次
+			if($arrtime['time'] + 30 > time()){
+				return 4;//搜索间隔少于30秒
+			}
+		}elseif($arr['number'] > 40){//用户当天搜索超过40次
+			return 5;//搜索间隔少于60秒
+		}elseif($arr['number'] > 50){//用户当天搜索超过50次
+			return 6;//当天禁止该用户搜索功能
+		}
+	}
+	//查询当前用户UID搜索次数
+	$arr = db_sql_find_one("SELECT COUNT(userid) AS number FROM `bbs_search_log` WHERE datetime >= unix_timestamp(curdate()) AND datetime <= unix_timestamp() AND userid = '" . $text1 . "'");
+	if($text1 == "0"){//用户未登录
+		if($arr['number'] > 5){//当天搜索超过5次
+			return 2;//强制要求登录
+		}
+	}else{
+		if($arr['number'] > 20){//用户当天搜索超过20次
+			if($arrtime['time'] + 30 > time()){
+				return 4;//搜索间隔少于30秒
+			}
+		}elseif($arr['number'] > 40){//用户当天搜索超过40次
+			return 5;//搜索间隔少于60秒
+		}elseif($arr['number'] > 50){//用户当天搜索超过50次
+			return 6;//当天禁止该用户搜索功能
+		}
+	}
+	//写入搜索日志
+	db_insert('search_log', array('clientip'=>$_SERVER["REMOTE_ADDR"], 'datetime'=>time(), 'userid'=>$text1, 'type'=>$text2, 'content'=>$text3));
+	return 1;//执行搜索
+}
+//浅唱修改结束
 ?>

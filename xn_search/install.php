@@ -28,6 +28,18 @@ $sql = "CREATE TABLE IF NOT EXISTS {$tablepre}post_search (
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;";
 db_exec($sql);
 
+
+//浅唱修改开始
+$sql = "CREATE TABLE IF NOT EXISTS {$tablepre}search_log (
+  `clientip` varchar(40) NOT NULL COMMENT '搜索时IP',
+  `datetime` int(13) NOT NULL COMMENT '搜索时间',
+  `userid` int(11) NOT NULL COMMENT '用户编号',
+  `type` int(1) NOT NULL COMMENT '搜索类型',
+  `content` varchar(255) NOT NULL COMMENT '搜索内容'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci";
+db_exec($sql);
+//浅唱修改结束
+
 // 默认为 FULLTEXT 搜索
 /*
 kv_set('xn_search_type', 'like'); // LIKE|FULLTEXT
